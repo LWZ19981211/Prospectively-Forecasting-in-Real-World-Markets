@@ -384,3 +384,68 @@ write.xlsx(
   accuracy_df,
   file = "accuracy_df.xlsx",
   rowNames = FALSE)
+
+p <- ggplot(
+  accuracy_df,
+  aes(x = Model, y = Acc_overall * 100, fill = Model)
+) +
+  geom_col(width = 0.8) +
+  geom_text(
+    aes(label = round(Acc_overall * 100, 2)),
+    vjust = -0.3,
+    size = 3,
+    family = "Times New Roman"
+  ) +
+  scale_fill_manual(values = my_colors) +
+  scale_y_continuous(
+    labels = function(x) paste0(round(x, 1), "%")
+  ) +
+  coord_cartesian(ylim = c(39, 54)) +
+  theme_bw() +
+  theme(
+    # 全局字体：Times New Roman，字号 10
+    text = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    
+    # 横坐标
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 10,
+      family = "Times New Roman"
+    ),
+    
+    # 纵坐标刻度
+    axis.text.y = element_text(
+      size = 10,
+      family = "Times New Roman"
+    ),
+    
+    # 坐标轴标题
+    axis.title.x = element_text(
+      size = 10,
+      family = "Times New Roman"
+    ),
+    axis.title.y = element_text(
+      size = 10,
+      family = "Times New Roman"
+    ),
+    
+    # 去掉图例和所有网格线
+    legend.position = "none",
+    panel.grid = element_blank()
+  ) +
+  labs(
+    x = "",
+    y = "Accuracy (%)"
+  )
+
+ggsave(
+  "Fig_Accuracy.pdf",
+  plot = p,
+  width = 10,
+  height = 6,
+  device = cairo_pdf
+)
