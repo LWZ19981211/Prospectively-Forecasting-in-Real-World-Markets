@@ -1,378 +1,2030 @@
 library(ggplot2)
 library(dplyr)
-library(tidyr)
 library(readxl)
-library(caret)
-library(scales)
 library(openxlsx)
 
 足球数据统计A <- read_excel("足球数据统计A.xlsx", sheet = 2)
-
 足球数据统计A <- 足球数据统计A[, !(names(足球数据统计A) %in% "Tipstrike")]
 足球数据统计A <- na.omit(足球数据统计A)
 
-num_cols <- c("主队XG","客队XG","主队xGA","客队xGA",
-              "主队进球","客队进球","主队丢球","客队丢球",
-              "主队身价","客队身价")
+# 数据类型转换
+足球数据统计A$主队XG <- as.numeric(as.character(足球数据统计A$主队XG))
+足球数据统计A$客队XG <- as.numeric(as.character(足球数据统计A$客队XG))
+足球数据统计A$主队xGA <- as.numeric(as.character(足球数据统计A$主队xGA))
+足球数据统计A$客队xGA <- as.numeric(as.character(足球数据统计A$客队xGA))
+足球数据统计A$主队进球 <- as.numeric(as.character(足球数据统计A$主队进球))
+足球数据统计A$客队进球 <- as.numeric(as.character(足球数据统计A$客队进球))
+足球数据统计A$主队丢球 <- as.numeric(as.character(足球数据统计A$主队丢球))
+足球数据统计A$客队丢球 <- as.numeric(as.character(足球数据统计A$客队丢球))
+足球数据统计A$主队身价 <- as.numeric(as.character(足球数据统计A$主队身价))
+足球数据统计A$客队身价 <- as.numeric(as.character(足球数据统计A$客队身价))
 
-for(col in num_cols){
-  足球数据统计A[[col]] <- as.numeric(as.character(足球数据统计A[[col]]))}
+actual <- 足球数据统计A$真实结果
 
-# name
+model_cols <- c(
+  "DeepSeek（中文，普通）","DeepSeek（中文，专业）","DeepSeek（英文，普通）","DeepSeek（英文，专业）",
+  "豆包（中文，普通）","豆包（中文，专业）","豆包（英文，普通）","豆包（英文，专业）",
+  "混元（中文，普通）","混元（中文，专业）","混元（英文，普通）","混元（英文，专业）",
+  "Qwen（中文，普通）","Qwen（中文，专业）","Qwen（英文，普通）","Qwen（英文，专业）",
+  "Claude（中文，普通）","Claude（中文，专业）","Claude（英文，普通）","Claude（英文，专业）",
+  "Grok（中文，普通）","Grok（中文，专业）","Grok（英文，普通）","Grok（英文，专业）",
+  "GPT（中文，普通）","GPT（中文，专业）","GPT（英文，普通）","GPT（英文，专业）",
+  "Forebet","Theyscored","AHCh")
 
-colnames(足球数据统计A)[colnames(足球数据统计A) == "DeepSeek（中文，普通）"] <- "DeepSeek_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "DeepSeek（中文，专业）"] <- "DeepSeek_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "DeepSeek（英文，普通）"] <- "DeepSeek_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "DeepSeek（英文，专业）"] <- "DeepSeek_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "豆包（中文，普通）"] <- "Doubao_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "豆包（中文，专业）"] <- "Doubao_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "豆包（英文，普通）"] <- "Doubao_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "豆包（英文，专业）"] <- "Doubao_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "混元（中文，普通）"] <- "Hunyuan_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "混元（中文，专业）"] <- "Hunyuan_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "混元（英文，普通）"] <- "Hunyuan_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "混元（英文，专业）"] <- "Hunyuan_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Qwen（中文，普通）"] <- "Qwen_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Qwen（中文，专业）"] <- "Qwen_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Qwen（英文，普通）"] <- "Qwen_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Qwen（英文，专业）"] <- "Qwen_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Claude（中文，普通）"] <- "Claude_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Claude（中文，专业）"] <- "Claude_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Claude（英文，普通）"] <- "Claude_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Claude（英文，专业）"] <- "Claude_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "GPT（中文，普通）"] <- "GPT_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "GPT（中文，专业）"] <- "GPT_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "GPT（英文，普通）"] <- "GPT_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "GPT（英文，专业）"] <- "GPT_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Grok（中文，普通）"] <- "Grok_C_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Grok（中文，专业）"] <- "Grok_C_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Grok（英文，普通）"] <- "Grok_E_Bsc"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Grok（英文，专业）"] <- "Grok_E_Pro"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Bet365"] <- "Bet365"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Forebet"] <- "Forebet"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Theyscored"] <- "Theyscored"
-colnames(足球数据统计A)[colnames(足球数据统计A) == "Avg_WDL"] <- "Avg"
-
-actual_label <- ifelse(
-  足球数据统计A$真实结果 > 0, "win",
-  ifelse(足球数据统计A$真实结果 < 0, "loss", "draw"))
-
-predict_cols <- c(
-  "DeepSeek_C_Bsc","DeepSeek_C_Pro","DeepSeek_E_Bsc","DeepSeek_E_Pro",
-  "Doubao_C_Bsc","Doubao_C_Pro","Doubao_E_Bsc","Doubao_E_Pro",
-  "Hunyuan_C_Bsc","Hunyuan_C_Pro","Hunyuan_E_Bsc","Hunyuan_E_Pro",
-  "Qwen_C_Bsc","Qwen_C_Pro","Qwen_E_Bsc","Qwen_E_Pro",
-  "Claude_C_Bsc","Claude_C_Pro","Claude_E_Bsc","Claude_E_Pro",
-  "GPT_C_Bsc","GPT_C_Pro","GPT_E_Bsc","GPT_E_Pro",
-  "Grok_C_Bsc","Grok_C_Pro","Grok_E_Bsc","Grok_E_Pro",
-  "Theyscored","Forebet","Bet365","Avg")
-
-pred_label <- lapply(predict_cols, function(col){
-  ifelse(足球数据统计A[[col]] > 0, "win",
-         ifelse(足球数据统计A[[col]] < 0, "loss", "draw"))})
-
-names(pred_label) <- predict_cols
-
-calc_metrics <- function(pred, actual, target_class){
-  pred <- factor(pred, levels = c("win","draw","loss"))
-  actual <- factor(actual, levels = c("win","draw","loss"))
-  TP <- sum(pred == target_class & actual == target_class)
-  FP <- sum(pred == target_class & actual != target_class)
-  FN <- sum(pred != target_class & actual == target_class)
-  precision <- ifelse(TP + FP == 0, 0, TP / (TP + FP))
-  recall    <- ifelse(TP + FN == 0, 0, TP / (TP + FN))
-  f1 <- ifelse((precision + recall) == 0,
-  0, 2 * precision * recall / (precision + recall))
-  return(c(precision, recall, f1))}
-
-metrics_list <- lapply(predict_cols, function(m){
-  p <- pred_label[[m]]
-  win  <- calc_metrics(p, actual_label, "win")
-  draw <- calc_metrics(p, actual_label, "draw")
-  loss <- calc_metrics(p, actual_label, "loss")
-  data.frame(Model = m, F1_win = win[3],
-    F1_draw = draw[3], F1_loss = loss[3])})
-
-metrics_df <- do.call(rbind, metrics_list)
-
-benchmark_models <- c("Theyscored","Forebet","Bet365","Avg")
-
-metrics_df$Group <- ifelse(
-  metrics_df$Model %in% benchmark_models,
-  "Benchmark", "LLM")
-
-llm_models <- setdiff(metrics_df$Model, benchmark_models)
-
-metrics_df$Model <- factor(metrics_df$Model,
-  levels = c(llm_models, benchmark_models))
-
-# colors
-my_colors <- c(
-  "DeepSeek_C_Bsc" = "#FFB6B6", "DeepSeek_C_Pro" = "#FF0000",
-  "DeepSeek_E_Bsc" = "#ADD8E6", "DeepSeek_E_Pro" = "#0000FF",
+name_map <- list(
+  DeepSeek_C_Bsc = "DeepSeek（中文，普通）",
+  DeepSeek_C_Pro = "DeepSeek（中文，专业）",
+  DeepSeek_E_Bsc = "DeepSeek（英文，普通）",
+  DeepSeek_E_Pro = "DeepSeek（英文，专业）",
   
-  "Doubao_C_Bsc" = "#FFB6B6", "Doubao_C_Pro" = "#FF0000",
-  "Doubao_E_Bsc" = "#ADD8E6", "Doubao_E_Pro" = "#0000FF",
+  Doubao_C_Bsc = "豆包（中文，普通）",
+  Doubao_C_Pro = "豆包（中文，专业）",
+  Doubao_E_Bsc = "豆包（英文，普通）",
+  Doubao_E_Pro = "豆包（英文，专业）",
   
-  "Hunyuan_C_Bsc" = "#FFB6B6", "Hunyuan_C_Pro" = "#FF0000",
-  "Hunyuan_E_Bsc" = "#ADD8E6", "Hunyuan_E_Pro" = "#0000FF",
+  Hunyuan_C_Bsc = "混元（中文，普通）",
+  Hunyuan_C_Pro = "混元（中文，专业）",
+  Hunyuan_E_Bsc = "混元（英文，普通）",
+  Hunyuan_E_Pro = "混元（英文，专业）",
   
-  "Qwen_C_Bsc" = "#FFB6B6", "Qwen_C_Pro" = "#FF0000",
-  "Qwen_E_Bsc" = "#ADD8E6", "Qwen_E_Pro" = "#0000FF",
+  Qwen_C_Bsc = "Qwen（中文，普通）",
+  Qwen_C_Pro = "Qwen（中文，专业）",
+  Qwen_E_Bsc = "Qwen（英文，普通）",
+  Qwen_E_Pro = "Qwen（英文，专业）",
   
-  "Claude_C_Bsc" = "#FFB6B6", "Claude_C_Pro" = "#FF0000",
-  "Claude_E_Bsc" = "#ADD8E6", "Claude_E_Pro" = "#0000FF",
+  Claude_C_Bsc = "Claude（中文，普通）",
+  Claude_C_Pro = "Claude（中文，专业）",
+  Claude_E_Bsc = "Claude（英文，普通）",
+  Claude_E_Pro = "Claude（英文，专业）",
   
-  "GPT_C_Bsc" = "#FFB6B6", "GPT_C_Pro" = "#FF0000",
-  "GPT_E_Bsc" = "#ADD8E6", "GPT_E_Pro" = "#0000FF",
+  GPT_C_Bsc = "GPT（中文，普通）",
+  GPT_C_Pro = "GPT（中文，专业）",
+  GPT_E_Bsc = "GPT（英文，普通）",
+  GPT_E_Pro = "GPT（英文，专业）",
   
-  "Grok_C_Bsc" = "#FFB6B6", "Grok_C_Pro" = "#FF0000",
-  "Grok_E_Bsc" = "#ADD8E6", "Grok_E_Pro" = "#0000FF",
+  Grok_C_Bsc = "Grok（中文，普通）",
+  Grok_C_Pro = "Grok（中文，专业）",
+  Grok_E_Bsc = "Grok（英文，普通）",
+  Grok_E_Pro = "Grok（英文，专业）",
   
-  "Theyscored" = "orange", "Forebet" = "orange", 
-  "Bet365" = "orange", "Avg" = "orange")
+  Theyscored = "Theyscored",
+  Forebet = "Forebet",
+  AHCh = "AHCh")
 
-# precision
-
-calc_precision <- function(pred, actual, target_class){
-  pred <- factor(pred, levels = c("win","draw","loss"))
-  actual <- factor(actual, levels = c("win","draw","loss"))
-  TP <- sum(pred == target_class & actual == target_class)
-  FP <- sum(pred == target_class & actual != target_class)
-  precision <- ifelse(TP + FP == 0, 0, TP / (TP + FP))
-  return(precision)}
-
-precision_list <- lapply(predict_cols, function(m){
-  p <- pred_label[[m]]
-  win  <- calc_precision(p, actual_label, "win")
-  draw <- calc_precision(p, actual_label, "draw")
-  loss <- calc_precision(p, actual_label, "loss")
-  data.frame(Model = m, Prec_win = win,
-             Prec_draw = draw, Prec_loss = loss)})
-
-precision_df <- do.call(rbind, precision_list)
-
-benchmark_models <- c("Theyscored","Forebet","Bet365","Avg")
-precision_df$Group <- ifelse(precision_df$Model %in% benchmark_models, "Benchmark", "LLM")
-llm_models <- setdiff(precision_df$Model, benchmark_models)
-precision_df$Model <- factor(precision_df$Model, levels = c(llm_models, benchmark_models))
-
-ggplot(precision_df, aes(x = Model, y = Prec_win * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Prec_win * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(50, 65)) +
-  labs(x = "", y = "Precision Win (%)")
-
-ggplot(precision_df, aes(x = Model, y = Prec_draw * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Prec_draw * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(0, 45)) +
-  labs(x = "", y = "Precision Draw (%)")
-
-ggplot(precision_df, aes(x = Model, y = Prec_loss * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Prec_loss * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(43, 58)) +
-  labs(x = "", y = "Precision Loss  (%)")
-
-write.xlsx(
-  precision_df,
-  file = "precision_df.xlsx",
-  rowNames = FALSE)
-
-# recall
-
-calc_recall <- function(pred, actual, target_class){
-  pred <- factor(pred, levels = c("win","draw","loss"))
-  actual <- factor(actual, levels = c("win","draw","loss"))
-  TP <- sum(pred == target_class & actual == target_class)
-  FN <- sum(pred != target_class & actual == target_class)
-  recall <- ifelse(TP + FN == 0, 0, TP / (TP + FN))
-  return(recall)}
-
-recall_list <- lapply(predict_cols, function(m){
-  p <- pred_label[[m]]
-  win  <- calc_recall(p, actual_label, "win")
-  draw <- calc_recall(p, actual_label, "draw")
-  loss <- calc_recall(p, actual_label, "loss")
-  data.frame(Model = m, Rec_win = win,
-             Rec_draw = draw, Rec_loss = loss)})
-
-recall_df <- do.call(rbind, recall_list)
-
-benchmark_models <- c("Theyscored","Forebet","Bet365","Avg")
-recall_df$Group <- ifelse(recall_df$Model %in% benchmark_models, "Benchmark", "LLM")
-llm_models <- setdiff(recall_df$Model, benchmark_models)
-recall_df$Model <- factor(recall_df$Model, levels = c(llm_models, benchmark_models))
-
-ggplot(recall_df, aes(x = Model, y = Rec_win * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Rec_win * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(37, 83)) +
-  labs(x = "", y = "Recall Win (%)")
-
-ggplot(recall_df, aes(x = Model, y = Rec_draw * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Rec_draw * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(0, 47)) +
-  labs(x = "", y = "Recall Draw (%)")
-
-ggplot(recall_df, aes(x = Model, y = Rec_loss * 100, fill = Model)) + geom_col() +
-  geom_text(aes(label = round(Rec_loss * 100, 2)), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(labels = function(x) paste0(x, "%")) + theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") +
-  coord_cartesian(ylim = c(31, 68)) +
-  labs(x = "", y = "Recall Loss (%)")
-
-write.xlsx(
-  recall_df,
-  file = "recall_df.xlsx",
-  rowNames = FALSE)
-
-# F1
-
-ggplot(metrics_df, aes(x = Model, y = F1_win, fill = Model)) +
-  geom_col() + geom_text(aes(label = round(F1_win,3)), 
-                         vjust = -0.3, size = 3) + scale_fill_manual(values = my_colors) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1),
-                     legend.position = "none") + coord_cartesian(ylim = c(0.45,0.65)) +
-  labs(x = "", y = "F1 Win")
-
-ggplot(metrics_df, aes(x = Model, y = F1_draw, fill = Model)) +
-  geom_col() + geom_text(aes(label = round(F1_draw,3)), 
-                         vjust = -0.3, size = 3) + scale_fill_manual(values = my_colors) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1),
-                     legend.position = "none") + coord_cartesian(ylim = c(0.15,0.35)) +
-  labs(x = "", y = "F1 Draw")
-
-ggplot(metrics_df, aes(x = Model, y = F1_loss, fill = Model)) +
-  geom_col() + geom_text(aes(label = round(F1_loss,3)), 
-                         vjust = -0.3, size = 3) + scale_fill_manual(values = my_colors) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1),
-                     legend.position = "none") + coord_cartesian(ylim = c(0.4,0.55)) +
-  labs(x = "", y = "F1 Loss")
-
-f1_export <- metrics_df %>%
-  mutate(
-    F1_win  = round(F1_win, 4),
-    F1_draw = round(F1_draw, 4),
-    F1_loss = round(F1_loss, 4))
-
-write.xlsx(
-  metrics_df,
-  file = "metrics_df.xlsx",
-  rowNames = FALSE)
+# prediction
+colnames(足球数据统计A) <- trimws(colnames(足球数据统计A))
+name_map <- name_map[unlist(name_map) %in% colnames(足球数据统计A)]
+pred_matrix <- as.data.frame(
+  lapply(name_map, function(col){
+    as.numeric(足球数据统计A[[col]])}))
+colnames(pred_matrix) <- names(name_map)
 
 # Accuracy
+accuracy <- sapply(predict_cols, function(x)
+  mean(足球数据统计A[[x]] == actual, na.rm = TRUE))
 
-accuracy_list <- lapply(predict_cols, function(m){
-  p <- pred_label[[m]]
-  overall_acc <- sum(p == actual_label) / length(actual_label)
-  data.frame(Model = m, Acc_overall = overall_acc)})
+# df
+accuracy_df <- data.frame(
+  Model = predict_cols,
+  Accuracy = accuracy)
 
-accuracy_df <- do.call(rbind, accuracy_list)
+# Benchmark vs AI Model
+benchmark_models <- c("Theyscored", "Forebet", "AHCh")
+accuracy_df$Source <- ifelse(accuracy_df$Model %in% benchmark_models,
+                             "Benchmark", "AI Model")
 
-benchmark_models <- c("Theyscored","Forebet","Bet365","Avg")
-llm_models <- setdiff(accuracy_df$Model, benchmark_models)
-accuracy_df$Model <- factor(accuracy_df$Model, levels = c(llm_models, benchmark_models))
+# model
+accuracy_df$Model <- factor(accuracy_df$Model, levels = predict_cols)
 
-ggplot(accuracy_df, aes(x = Model, y = Acc_overall * 100, fill = Model)) +
-  geom_col(width = 0.8) + geom_text(
-    aes(label = round(Acc_overall * 100, 2)), vjust = -0.3, size = 3) + 
-  scale_fill_manual(values = my_colors) + scale_y_continuous(
-    labels = function(x) paste0(round(x, 1), "%")
-  ) + coord_cartesian(ylim = c(39, 54)) + theme_bw() + theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-    axis.title.x = element_text(size = 11),
-    axis.title.y = element_text(size = 11),
-    legend.position = "none",
-    panel.grid.minor = element_blank()) +
-  labs(x = "", y = "Accuracy (%)")
+# ====================================
+# Metrics
+# ====================================
 
-write.xlsx(
-  accuracy_df,
-  file = "accuracy_df.xlsx",
-  rowNames = FALSE)
+actual <- as.numeric(actual)
+metric_results <- data.frame(
+  Model = colnames(pred_matrix),
+  MAE = sapply(pred_matrix, function(x)
+    mean(abs(x - actual), na.rm = TRUE)),
+  RMSE = sapply(pred_matrix, function(x)
+    sqrt(mean((x - actual)^2, na.rm = TRUE))),
+  Pearson = sapply(pred_matrix, function(x)
+    cor(x, actual, use = "complete.obs")))
 
-p <- ggplot(
-  accuracy_df,
-  aes(x = Model, y = Acc_overall * 100, fill = Model)
+# ====================================
+# Benchmark Group
+# ====================================
+
+metric_results$Group <- "LLM"
+
+metric_results$Group[
+  metric_results$Model %in%
+    c("Theyscored", "Forebet", "AHCh")
+] <- "Benchmark"
+
+benchmark_models <- c("Theyscored", "Forebet", "AHCh")
+
+llm_models <- setdiff(metric_results$Model,
+                      benchmark_models)
+
+metric_results$Model <- factor(metric_results$Model,
+                               levels = c(names(pred_matrix)))
+
+# ====================================
+# MAE
+# ====================================
+
+metric_results <- metric_results %>%
+  mutate(StyleGroup = case_when(
+    Model %in% c("Theyscored", "Forebet", "AHCh") ~ Model,
+    TRUE ~ Model))
+
+my_colors <- c(
+  "DeepSeek_C_Bsc" = "#FFB6B6", "DeepSeek_C_Pro" = "#FF0000", "DeepSeek_E_Bsc" = "#ADD8E6", "DeepSeek_E_Pro" = "#0000FF",
+  "Doubao_C_Bsc" = "#FFB6B6", "Doubao_C_Pro" = "#FF0000", "Doubao_E_Bsc" = "#ADD8E6", "Doubao_E_Pro" = "#0000FF",
+  "Hunyuan_C_Bsc" = "#FFB6B6", "Hunyuan_C_Pro" = "#FF0000", "Hunyuan_E_Bsc" = "#ADD8E6", "Hunyuan_E_Pro" = "#0000FF",
+  "Qwen_C_Bsc" = "#FFB6B6", "Qwen_C_Pro" = "#FF0000", "Qwen_E_Bsc" = "#ADD8E6", "Qwen_E_Pro" = "#0000FF",
+  "Claude_C_Bsc" = "#FFB6B6", "Claude_C_Pro" = "#FF0000", "Claude_E_Bsc" = "#ADD8E6", "Claude_E_Pro" = "#0000FF",
+  "GPT_C_Bsc" = "#FFB6B6", "GPT_C_Pro" = "#FF0000", "GPT_E_Bsc" = "#ADD8E6", "GPT_E_Pro" = "#0000FF",
+  "Grok_C_Bsc" = "#FFB6B6", "Grok_C_Pro" = "#FF0000", "Grok_E_Bsc" = "#ADD8E6", "Grok_E_Pro" = "#0000FF",
+  "Theyscored" = "orange", "Forebet" = "orange", "AHCh" = "orange")
+
+metric_results$Model <- factor(
+  metric_results$Model,
+  levels = names(my_colors))
+
+ggplot(metric_results, aes(x = Model, y = MAE, fill = Model)) +
+  
+  geom_col() + geom_text(
+    aes(label = round(MAE, 3)),
+    vjust = -0.3, size = 3) +
+  
+  scale_fill_manual(values = my_colors) +
+  
+  theme_bw() + theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none") +
+  
+  coord_cartesian(ylim = c(1.15, 1.45))
+
+# ====================================
+# 1. 删除 AHCh、Bet365 和 Avg
+# ====================================
+
+metric_results_MAE <- metric_results %>%
+  filter(!Model %in% c("AHCh", "Bet365", "Avg"))
+
+# 保持原有模型顺序
+model_order <- setdiff(
+  names(my_colors),
+  c("AHCh", "Bet365", "Avg")
+)
+
+metric_results_MAE$Model <- factor(
+  metric_results_MAE$Model,
+  levels = model_order
+)
+
+# 删除模型名称或 MAE 缺失的行
+metric_results_MAE <- metric_results_MAE %>%
+  filter(!is.na(Model), !is.na(MAE))
+
+# ====================================
+# 2. MAE Plot
+# Y-axis: 1.15–1.45
+# Font: Times New Roman, size 10
+# ====================================
+
+p_MAE <- ggplot(
+  metric_results_MAE,
+  aes(x = Model, y = MAE - 1.15, fill = Model)
 ) +
+  
+  # 柱形从 MAE = 1.15 的基准开始
   geom_col(width = 0.8) +
+  
+  # 显示原始 MAE 数值
   geom_text(
-    aes(label = round(Acc_overall * 100, 2)),
-    vjust = -0.3,
-    size = 3,
+    aes(
+      y = MAE - 1.15,
+      label = sprintf("%.3f", MAE)
+    ),
+    vjust = -0.5,
+    size = 10 / 2.845,
     family = "Times New Roman"
   ) +
-  scale_fill_manual(values = my_colors) +
-  scale_y_continuous(
-    labels = function(x) paste0(round(x, 1), "%")
+  
+  # 保留原有配色
+  scale_fill_manual(
+    values = my_colors[
+      setdiff(
+        names(my_colors),
+        c("AHCh", "Bet365", "Avg")
+      )
+    ],
+    drop = TRUE
   ) +
-  coord_cartesian(ylim = c(39, 54)) +
-  theme_bw() +
+  
+  # 纵轴刻度显示原始 MAE 数值
+  scale_y_continuous(
+    breaks = seq(0, 0.30, by = 0.05),
+    labels = function(x) sprintf("%.2f", x + 1.15),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  
+  # 显示范围对应原始 MAE 1.15–1.45
+  coord_cartesian(
+    ylim = c(0, 0.30)
+  ) +
+  
+  # 限制横坐标模型及其顺序
+  scale_x_discrete(
+    limits = model_order,
+    drop = TRUE,
+    expand = expansion(add = 0.5)
+  ) +
+  
+  theme_bw(
+    base_family = "Times New Roman",
+    base_size = 10
+  ) +
+  
   theme(
-    # 全局字体：Times New Roman，字号 10
+    axis.title.x = element_blank(),
+    
+    axis.title.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      angle = 45,
+      hjust = 1,
+      vjust = 1,
+      size = 10,
+      margin = margin(t = 5)
+    ),
+    
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    
+    legend.position = "none",
+    
+    # 去掉所有网格线
+    panel.grid = element_blank(),
+    
+    # 为横坐标标签预留空间
+    plot.margin = margin(
+      t = 15,
+      r = 15,
+      b = 25,
+      l = 15,
+      unit = "mm"
+    )
+  ) +
+  
+  labs(
+    x = NULL,
+    y = "MAE"
+  )
+
+# 重新设置图表样式
+p_MAE_final <- p_MAE +
+  theme_bw(base_family = "Times New Roman", base_size = 10) +
+  theme(
+    # 统一默认字体
     text = element_text(
       family = "Times New Roman",
       size = 10
     ),
     
-    # 横坐标
+    # 坐标轴标题：10 pt
+    axis.title = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    
+    # 横坐标数字和模型名称：12 pt
     axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
       angle = 45,
       hjust = 1,
-      size = 10,
-      family = "Times New Roman"
+      vjust = 1,
+      margin = margin(t = 3)
     ),
     
-    # 纵坐标刻度
+    # 纵坐标数字：12 pt
     axis.text.y = element_text(
-      size = 10,
-      family = "Times New Roman"
+      family = "Times New Roman",
+      size = 12
     ),
     
-    # 坐标轴标题
-    axis.title.x = element_text(
-      size = 10,
-      family = "Times New Roman"
-    ),
-    axis.title.y = element_text(
-      size = 10,
-      family = "Times New Roman"
+    # 去除网格线
+    panel.grid = element_blank(),
+    
+    # 缩小图表外围留白
+    plot.margin = margin(
+      t = 2,
+      r = 5,
+      b = 8,
+      l = 5,
+      unit = "mm"
     ),
     
-    # 去掉图例和所有网格线
-    legend.position = "none",
-    panel.grid = element_blank()
-  ) +
-  labs(
-    x = "",
-    y = "Accuracy (%)"
+    legend.position = "none"
   )
 
-# 导出 PDF
 ggsave(
-  "Fig_Accuracy.pdf",
-  plot = p,
-  width = 10,
-  height = 6,
-  device = cairo_pdf
+  filename = "Fig_MAE_final.pdf",
+  plot = p_MAE_final,
+  width = 11,
+  height = 5.5,
+  units = "in",
+  device = cairo_pdf,
+  limitsize = FALSE
+)
+
+# ====================================
+# RMSE
+# ====================================
+
+ggplot(metric_results, aes(x = Model, y = RMSE, fill = Model)) + 
+  geom_col() + geom_text(
+    aes(label = round(RMSE, 3)),
+    vjust = -0.3, size = 3) +
+  
+  scale_fill_manual(values = my_colors) +
+  
+  coord_cartesian(ylim = c(1.45, 1.85)) + theme_bw() +
+  
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none")
+
+# ====================================
+# Pearson
+# ====================================
+
+ggplot(metric_results, aes(x = Model, y = Pearson, fill = Model)) + geom_col() +
+  
+  geom_text(aes(label = round(Pearson, 3)),
+            vjust = -0.3, size = 3) +
+  
+  scale_fill_manual(
+    values = my_colors) + theme_bw() +
+  
+  coord_cartesian(ylim = c(0.3, 0.45)) +
+  
+  theme(axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none")
+
+wb_metric <- createWorkbook()
+addWorksheet(wb_metric, "MAE_Results")
+writeData(wb_metric, "MAE_Results", metric_results)
+saveWorkbook(wb_metric, 
+             "metric_results.xlsx", 
+             overwrite = TRUE)
+
+# ====================================
+# Test
+# ====================================
+
+############################################################
+# LLM vs Benchmark
+# Accuracy: McNemar Test + BH-FDR
+# MAE: Paired t-test + BH-FDR
+#
+# 28 LLMs × 4 Benchmarks = 112 comparisons
+############################################################
+
+# 1. LLM models
+############################################################
+
+llm_models <- c(
+  "DeepSeek_C_Bsc",
+  "DeepSeek_C_Pro",
+  "DeepSeek_E_Bsc",
+  "DeepSeek_E_Pro",
+  
+  "Doubao_C_Bsc",
+  "Doubao_C_Pro",
+  "Doubao_E_Bsc",
+  "Doubao_E_Pro",
+  
+  "Hunyuan_C_Bsc",
+  "Hunyuan_C_Pro",
+  "Hunyuan_E_Bsc",
+  "Hunyuan_E_Pro",
+  
+  "Qwen_C_Bsc",
+  "Qwen_C_Pro",
+  "Qwen_E_Bsc",
+  "Qwen_E_Pro",
+  
+  "Claude_C_Bsc",
+  "Claude_C_Pro",
+  "Claude_E_Bsc",
+  "Claude_E_Pro",
+  
+  "GPT_C_Bsc",
+  "GPT_C_Pro",
+  "GPT_E_Bsc",
+  "GPT_E_Pro",
+  
+  "Grok_C_Bsc",
+  "Grok_C_Pro",
+  "Grok_E_Bsc",
+  "Grok_E_Pro"
+)
+
+
+
+############################################################
+# 2. Benchmark names
+############################################################
+
+benchmark_models <- c(
+  "Theyscored",
+  "Forebet",
+  "Bet365",
+  "Avg"
+)
+
+
+
+############################################################
+# 3. Check whether all columns exist
+############################################################
+
+all_required_columns <- c(
+  llm_models,
+  benchmark_models,
+  "真实结果"
+)
+
+missing_columns <- setdiff(
+  all_required_columns,
+  names(足球数据统计A)
+)
+
+if(length(missing_columns) > 0){
+  
+  stop(
+    paste(
+      "以下变量不存在：",
+      paste(missing_columns, collapse = ", ")
+    )
+  )
+  
+}
+
+
+
+############################################################
+############################################################
+# TABLE D.1
+# LLM vs Benchmark Accuracy
+# McNemar Test
+############################################################
+############################################################
+
+
+D1_list <- list()
+
+
+counter <- 1
+
+
+for(llm in llm_models){
+  
+  for(benchmark in benchmark_models){
+    
+    
+    # LLM prediction
+    llm_pred <- pred_label[[llm]]
+    
+    
+    # Benchmark prediction
+    benchmark_pred <- pred_label[[benchmark]]
+    
+    
+    # Correct / incorrect
+    llm_correct <-
+      llm_pred == actual_label
+    
+    benchmark_correct <-
+      benchmark_pred == actual_label
+    
+    
+    # McNemar test
+    test <- mcnemar.test(
+      table(
+        LLM = llm_correct,
+        Benchmark = benchmark_correct
+      )
+    )
+    
+    
+    # Store result
+    D1_list[[counter]] <- data.frame(
+      
+      LLM = llm,
+      
+      Benchmark = benchmark,
+      
+      LLM_Accuracy =
+        mean(llm_correct),
+      
+      Benchmark_Accuracy =
+        mean(benchmark_correct),
+      
+      Accuracy_Difference =
+        mean(llm_correct) -
+        mean(benchmark_correct),
+      
+      McNemar_Chi_Square =
+        as.numeric(test$statistic),
+      
+      p_value =
+        test$p.value
+      
+    )
+    
+    
+    counter <- counter + 1
+    
+  }
+  
+}
+
+
+
+Table_D1 <- bind_rows(D1_list)
+
+
+
+############################################################
+# 4. BH-FDR
+# 112 comparisons jointly corrected
+############################################################
+
+Table_D1$FDR_q_value <- p.adjust(
+  Table_D1$p_value,
+  method = "BH"
+)
+
+
+
+############################################################
+# 5. Significance after FDR
+############################################################
+
+Table_D1 <- Table_D1 %>%
+  mutate(
+    FDR_Significant =
+      ifelse(FDR_q_value < 0.05, "Yes", "No")
+  )
+
+
+
+############################################################
+############################################################
+# TABLE D.2
+# LLM vs Benchmark MAE
+# Paired t-test
+############################################################
+############################################################
+
+
+actual_value <- as.numeric(
+  足球数据统计A$真实结果
+)
+
+
+D2_list <- list()
+
+
+counter <- 1
+
+
+for(llm in llm_models){
+  
+  for(benchmark in benchmark_models){
+    
+    
+    # Continuous predictions
+    llm_prediction <- as.numeric(
+      足球数据统计A[[llm]]
+    )
+    
+    benchmark_prediction <- as.numeric(
+      足球数据统计A[[benchmark]]
+    )
+    
+    
+    # Absolute errors
+    llm_error <-
+      abs(llm_prediction - actual_value)
+    
+    benchmark_error <-
+      abs(benchmark_prediction - actual_value)
+    
+    
+    # Paired t-test
+    test <- t.test(
+      llm_error,
+      benchmark_error,
+      paired = TRUE
+    )
+    
+    
+    # Store result
+    D2_list[[counter]] <- data.frame(
+      
+      LLM = llm,
+      
+      Benchmark = benchmark,
+      
+      LLM_MAE =
+        mean(llm_error, na.rm = TRUE),
+      
+      Benchmark_MAE =
+        mean(benchmark_error, na.rm = TRUE),
+      
+      MAE_Difference =
+        mean(llm_error, na.rm = TRUE) -
+        mean(benchmark_error, na.rm = TRUE),
+      
+      Paired_t =
+        as.numeric(test$statistic),
+      
+      df =
+        as.numeric(test$parameter),
+      
+      p_value =
+        test$p.value
+      
+    )
+    
+    
+    counter <- counter + 1
+    
+  }
+  
+}
+
+
+
+Table_D2 <- bind_rows(D2_list)
+
+
+
+############################################################
+# 6. BH-FDR
+# 112 comparisons jointly corrected
+############################################################
+
+Table_D2$FDR_q_value <- p.adjust(
+  Table_D2$p_value,
+  method = "BH"
+)
+
+
+
+############################################################
+# 7. Significance after FDR
+############################################################
+
+Table_D2 <- Table_D2 %>%
+  mutate(
+    FDR_Significant =
+      ifelse(FDR_q_value < 0.05, "Yes", "No")
+  )
+
+
+
+############################################################
+############################################################
+# 8. Arrange results
+############################################################
+############################################################
+
+
+Table_D1 <- Table_D1 %>%
+  select(
+    LLM,
+    Benchmark,
+    LLM_Accuracy,
+    Benchmark_Accuracy,
+    Accuracy_Difference,
+    McNemar_Chi_Square,
+    p_value,
+    FDR_q_value,
+    FDR_Significant
+  )
+
+
+Table_D2 <- Table_D2 %>%
+  select(
+    LLM,
+    Benchmark,
+    LLM_MAE,
+    Benchmark_MAE,
+    MAE_Difference,
+    Paired_t,
+    df,
+    p_value,
+    FDR_q_value,
+    FDR_Significant
+  )
+
+
+
+############################################################
+############################################################
+# 9. View results
+############################################################
+############################################################
+
+
+View(Table_D1)
+
+View(Table_D2)
+
+
+
+############################################################
+# 10. Export Excel
+############################################################
+
+
+write.xlsx(
+  
+  list(
+    LLM_vs_Benchmark_Accuracy = Table_D1,
+    LLM_vs_Benchmark_MAE = Table_D2
+  ),
+  
+  file = "LLM_vs_Benchmark_FDR.xlsx",
+  
+  rowNames = FALSE
+  
+)
+
+
+
+############################################################
+# 11. Check how many significant results remain
+############################################################
+
+
+cat(
+  "\nAccuracy: Number of FDR-significant comparisons = ",
+  sum(Table_D1$FDR_Significant == "Yes"),
+  " / 112\n"
+)
+
+
+cat(
+  "MAE: Number of FDR-significant comparisons = ",
+  sum(Table_D2$FDR_Significant == "Yes"),
+  " / 112\n"
+)
+
+
+
+############################################################
+# 12. Show significant results only
+############################################################
+
+
+Accuracy_significant <- Table_D1 %>%
+  filter(FDR_Significant == "Yes")
+
+
+MAE_significant <- Table_D2 %>%
+  filter(FDR_Significant == "Yes")
+
+
+
+View(Accuracy_significant)
+
+View(MAE_significant)
+
+# Model
+
+# 1. 划分中国模型群 (China) 与美国模型群 (US) 的列名集合 (共 28 个 LLM 配置)
+china_cols <- c(
+  "DeepSeek（中文，普通）", "DeepSeek（中文，专业）", "DeepSeek（英文，普通）", "DeepSeek（英文，专业）",
+  "豆包（中文，普通）",     "豆包（中文，专业）",     "豆包（英文，普通）",     "豆包（英文，专业）",
+  "混元（中文，普通）",     "混元（中文，专业）",     "混元（英文，普通）",     "混元（英文，专业）",
+  "Qwen（中文，普通）",     "Qwen（中文，专业）",     "Qwen（英文，普通）",     "Qwen（英文，专业）"
+)
+
+us_cols <- c(
+  "Claude（中文，普通）",   "Claude（中文，专业）",   "Claude（英文，普通）",   "Claude（英文，专业）",
+  "Grok（中文，普通）",     "Grok（中文，专业）",     "Grok（英文，普通）",     "Grok（英文，专业）",
+  "GPT（中文，普通）",      "GPT（中文，专业）",      "GPT（英文，普通）",      "GPT（英文，专业）"
+)
+
+# 2. 提取真实结果向量 (N = 447)
+actual_vec <- as.numeric(足球数据统计A$真实结果)
+
+# 3. 提取预测矩阵并转换为 numeric
+mat_china <- sapply(china_cols, function(col) as.numeric(足球数据统计A[[col]]))
+mat_us    <- sapply(us_cols, function(col) as.numeric(足球数据统计A[[col]]))
+
+# 4. 计算每场比赛 (i = 1...447) 梯队的平均绝对残差 MAE
+mae_cn_i <- rowMeans(abs(mat_china - actual_vec), na.rm = TRUE)
+mae_us_i <- rowMeans(abs(mat_us - actual_vec), na.rm = TRUE)
+
+# 5. 执行配对样本 t 检验与效应量计算
+diff_vec <- mae_us_i - mae_cn_i
+
+if (all(diff_vec == 0)) {
+  t_stat  <- 0
+  df_val  <- length(diff_vec) - 1
+  p_val   <- 1.0000
+  cohen_d <- 0
+} else {
+  t_res   <- t.test(mae_us_i, mae_cn_i, paired = TRUE)
+  d_res   <- cohen.d(mae_us_i, mae_cn_i, paired = TRUE)
+  
+  t_stat  <- unname(t_res$statistic)
+  df_val  <- unname(t_res$parameter)
+  p_val   <- t_res$p.value
+  cohen_d <- d_res$estimate
+}
+
+# 6. 整合结果表
+task_c5_result <- data.frame(
+  Comparison  = "US Models vs. China Models",
+  MAE_US      = round(mean(mae_us_i, na.rm = TRUE), 4),
+  MAE_China   = round(mean(mae_cn_i, na.rm = TRUE), 4),
+  Diff        = round(mean(diff_vec, na.rm = TRUE), 4), # 正值代表美国模型误差更大，负值代表中国模型误差更大
+  t_stat      = round(t_stat, 3),
+  df          = df_val,
+  p_value     = ifelse(p_val < 0.001, "< 0.001", sprintf("%.4f", p_val)),
+  Cohens_d    = round(cohen_d, 3)
+)
+
+# 7. 控制台输出
+print(task_c5_result, row.names = FALSE)
+
+# languages
+
+# 1. 定义 14 组中文与英文对应的列名对
+lang_pairs <- list(
+  DeepSeek_Bsc = c("DeepSeek（中文，普通）", "DeepSeek（英文，普通）"),
+  DeepSeek_Pro = c("DeepSeek（中文，专业）", "DeepSeek（英文，专业）"),
+  Doubao_Bsc   = c("豆包（中文，普通）",     "豆包（英文，普通）"),
+  Doubao_Pro   = c("豆包（中文，专业）",     "豆包（英文，专业）"),
+  Hunyuan_Bsc  = c("混元（中文，普通）",     "混元（英文，普通）"),
+  Hunyuan_Pro  = c("混元（中文，专业）",     "混元（英文，专业）"),
+  Qwen_Bsc     = c("Qwen（中文，普通）",     "Qwen（英文，普通）"),
+  Qwen_Pro     = c("Qwen（中文，专业）",     "Qwen（英文，专业）"),
+  Claude_Bsc   = c("Claude（中文，普通）",   "Claude（英文，普通）"),
+  Claude_Pro   = c("Claude（中文，专业）",   "Claude（英文，专业）"),
+  Grok_Bsc     = c("Grok（中文，普通）",     "Grok（英文，普通）"),
+  Grok_Pro     = c("Grok（中文，专业）",     "Grok（英文，专业）"),
+  GPT_Bsc      = c("GPT（中文，普通）",      "GPT（英文，普通）"),
+  GPT_Pro      = c("GPT（中文，专业）",      "GPT（英文，专业）")
+)
+
+actual_vec <- as.numeric(足球数据统计A$真实结果)
+
+# 2. 逐组计算配对 t 检验和效应量
+task_c3_results <- lapply(names(lang_pairs), function(name) {
+  zh_col <- lang_pairs[[name]][1]
+  en_col <- lang_pairs[[name]][2]
+  
+  pred_zh <- as.numeric(足球数据统计A[[zh_col]])
+  pred_en <- as.numeric(足球数据统计A[[en_col]])
+  
+  # 逐场计算绝对误差 (N = 447)
+  mae_zh <- abs(pred_zh - actual_vec)
+  mae_en <- abs(pred_en - actual_vec)
+  
+  # 配对 t 检验: mae_zh vs mae_en
+  t_res <- t.test(mae_zh, mae_en, paired = TRUE)
+  # 配对 Cohen's d
+  d_res <- cohen.d(mae_zh, mae_en, paired = TRUE)
+  
+  data.frame(
+    Model_Config = name,
+    MAE_ZH       = mean(mae_zh, na.rm = TRUE),
+    MAE_EN       = mean(mae_en, na.rm = TRUE),
+    Diff         = mean(mae_zh - mae_en, na.rm = TRUE), # 正值代表中文误差大，负值代表英文误差大
+    t_stat       = unname(t_res$statistic),
+    df           = unname(t_res$parameter),
+    p_value      = t_res$p.value,
+    Cohens_d     = d_res$estimate
+  )
+})
+
+# 3. 合并 14 组结果
+task_c3_df <- do.call(rbind, task_c3_results)
+
+# 数值格式化
+task_c3_df <- task_c3_df %>%
+  mutate(
+    MAE_ZH   = round(MAE_ZH, 4),
+    MAE_EN   = round(MAE_EN, 4),
+    Diff     = round(Diff, 4),
+    t_stat   = round(t_stat, 3),
+    p_value  = ifelse(p_value < 0.001, "< 0.001", sprintf("%.4f", p_value)),
+    Cohens_d = round(Cohens_d, 3)
+  )
+
+# 4. 控制台打印输出 14 组配对检验结果
+print(task_c3_df, row.names = FALSE)
+
+# Bsc vs Pro
+
+# 1. 定义 14 组 Basic 与 Pro 对应的列名对
+model_pairs <- list(
+  DeepSeek_CN = c("DeepSeek（中文，普通）", "DeepSeek（中文，专业）"),
+  DeepSeek_EN = c("DeepSeek（英文，普通）", "DeepSeek（英文，专业）"),
+  Doubao_CN   = c("豆包（中文，普通）",     "豆包（中文，专业）"),
+  Doubao_EN   = c("豆包（英文，普通）",     "豆包（英文，专业）"),
+  Hunyuan_CN  = c("混元（中文，普通）",     "混元（中文，专业）"),
+  Hunyuan_EN  = c("混元（英文，普通）",     "混元（英文，专业）"),
+  Qwen_CN     = c("Qwen（中文，普通）",     "Qwen（中文，专业）"),
+  Qwen_EN     = c("Qwen（英文，普通）",     "Qwen（英文，专业）"),
+  Claude_CN   = c("Claude（中文，普通）",   "Claude（中文，专业）"),
+  Claude_EN   = c("Claude（英文，普通）",   "Claude（英文，专业）"),
+  Grok_CN     = c("Grok（中文，普通）",     "Grok（中文，专业）"),
+  Grok_EN     = c("Grok（英文，普通）",     "Grok（英文，专业）"),
+  GPT_CN      = c("GPT（中文，普通）",      "GPT（中文，专业）"),
+  GPT_EN      = c("GPT（英文，普通）",      "GPT（英文，专业）")
+)
+
+actual_vec <- as.numeric(足球数据统计A$真实结果)
+
+# 2. 逐组计算配对 t 检验和效应量
+paired_results <- lapply(names(model_pairs), function(name) {
+  bsc_col <- model_pairs[[name]][1]
+  pro_col <- model_pairs[[name]][2]
+  
+  pred_bsc <- as.numeric(足球数据统计A[[bsc_col]])
+  pred_pro <- as.numeric(足球数据统计A[[pro_col]])
+  
+  # 逐场计算绝对误差 (N = 447)
+  err_bsc <- abs(pred_bsc - actual_vec)
+  err_pro <- abs(pred_pro - actual_vec)
+  
+  # 配对 t 检验
+  t_res <- t.test(err_bsc, err_pro, paired = TRUE)
+  # 配对 Cohen's d
+  d_res <- cohen.d(err_bsc, err_pro, paired = TRUE)
+  
+  data.frame(
+    Model_Pair  = name,
+    MAE_Bsc     = mean(err_bsc, na.rm = TRUE),
+    MAE_Pro     = mean(err_pro, na.rm = TRUE),
+    Diff        = mean(err_bsc - err_pro, na.rm = TRUE), # 正值代表 Bsc 误差更大（Pro 更好）
+    t_stat      = unname(t_res$statistic),
+    df          = unname(t_res$parameter),
+    p_value     = t_res$p.value,
+    Cohens_d    = d_res$estimate
+  )
+})
+
+# 3. 合并 14 组结果
+task_c2_results <- do.call(rbind, paired_results)
+
+# 格式化数值展示
+task_c2_results <- task_c2_results %>%
+  mutate(
+    MAE_Bsc  = round(MAE_Bsc, 4),
+    MAE_Pro  = round(MAE_Pro, 4),
+    Diff     = round(Diff, 4),
+    t_stat   = round(t_stat, 3),
+    p_value  = ifelse(p_value < 0.001, "< 0.001", sprintf("%.4f", p_value)),
+    Cohens_d = round(Cohens_d, 3)
+  )
+
+# 在控制台打印完整结果表
+print(task_c2_results, row.names = FALSE)
+
+# 置信区间
+
+accuracy_ci <- lapply(predict_cols, function(col) {
+  
+  actual <- tolower(actual_label)
+  
+  pred <- ifelse(
+    足球数据统计A[[col]] > 0, "win",
+    ifelse(足球数据统计A[[col]] < 0, "loss", "draw")
+  )
+  
+  correct <- sum(pred == actual)
+  n <- length(actual)
+  
+  test <- binom.test(
+    correct,
+    n,
+    conf.level = 0.95
+  )
+  
+  data.frame(
+    Model = col,
+    Correct = correct,
+    Total = n,
+    Accuracy = correct / n,
+    CI_Lower = test$conf.int[1],
+    CI_Upper = test$conf.int[2]
+  )
+}) |>
+  dplyr::bind_rows()
+
+accuracy_ci_excel <- accuracy_ci
+
+accuracy_ci_excel$Accuracy <- accuracy_ci_excel$Accuracy
+accuracy_ci_excel$CI_Lower <- accuracy_ci_excel$CI_Lower
+accuracy_ci_excel$CI_Upper <- accuracy_ci_excel$CI_Upper
+
+wb <- createWorkbook()
+addWorksheet(wb, "Accuracy CI")
+
+writeData(wb, "Accuracy CI", accuracy_ci_excel)
+
+percent_style <- createStyle(numFmt = "0.00%")
+
+addStyle(
+  wb, "Accuracy CI",
+  style = percent_style,
+  cols = 4:6,
+  rows = 2:(nrow(accuracy_ci_excel) + 1),
+  gridExpand = TRUE
+)
+
+saveWorkbook(
+  wb,
+  "accuracy_ci.xlsx",
+  overwrite = TRUE
+)
+
+# Win-only baseline
+
+mcnemar_results <- lapply(seq_along(predict_cols), function(i) {
+  
+  model <- predict_cols[i]
+  
+  pred <- pred_label[[i]]
+  
+  baseline_correct <- baseline_label == actual_label
+  model_correct <- pred == actual_label
+  
+  tab <- table(
+    Baseline = baseline_correct,
+    Model = model_correct
+  )
+  
+  test <- mcnemar.test(tab)
+  
+  data.frame(
+    Model = model,
+    Baseline_Accuracy = mean(baseline_correct),
+    Model_Accuracy = mean(model_correct),
+    Baseline_Correct_Model_Wrong = tab["TRUE", "FALSE"],
+    Baseline_Wrong_Model_Correct = tab["FALSE", "TRUE"],
+    McNemar_Chi_Square = unname(test$statistic),
+    P_Value = test$p.value
+  )
+}) |>
+  dplyr::bind_rows()
+
+write.xlsx(
+  mcnemar_results,
+  file = "mcnemar_results.xlsx",
+  rowNames = FALSE
+)
+
+############################################################
+# McNemar Test: Basic vs. Pro and Chinese vs. English
+############################################################
+
+# actual_label 和 pred_label 已经在前面生成
+# pred_label 是一个包含 32 个预测方法的 list
+
+
+############################################################
+## Table B.2: Basic vs. Pro
+############################################################
+
+model_names <- c(
+  "DeepSeek",
+  "Doubao",
+  "Hunyuan",
+  "Qwen",
+  "Claude",
+  "GPT",
+  "Grok"
+)
+
+B2_list <- lapply(model_names, function(model) {
+  
+  # Basic
+  bsc_C <- pred_label[[paste0(model, "_C_Bsc")]]
+  pro_C <- pred_label[[paste0(model, "_C_Pro")]]
+  
+  bsc_E <- pred_label[[paste0(model, "_E_Bsc")]]
+  pro_E <- pred_label[[paste0(model, "_E_Pro")]]
+  
+  # Chinese: Basic vs Pro
+  test_C <- mcnemar.test(
+    table(
+      Basic = bsc_C == actual_label,
+      Pro   = pro_C == actual_label
+    )
+  )
+  
+  # English: Basic vs Pro
+  test_E <- mcnemar.test(
+    table(
+      Basic = bsc_E == actual_label,
+      Pro   = pro_E == actual_label
+    )
+  )
+  
+  data.frame(
+    Model = model,
+    
+    CN_Basic_Accuracy =
+      mean(bsc_C == actual_label),
+    
+    CN_Pro_Accuracy =
+      mean(pro_C == actual_label),
+    
+    CN_McNemar_Chi_Square =
+      unname(test_C$statistic),
+    
+    CN_p_value =
+      test_C$p.value,
+    
+    EN_Basic_Accuracy =
+      mean(bsc_E == actual_label),
+    
+    EN_Pro_Accuracy =
+      mean(pro_E == actual_label),
+    
+    EN_McNemar_Chi_Square =
+      unname(test_E$statistic),
+    
+    EN_p_value =
+      test_E$p.value
+  )
+})
+
+B2_raw <- do.call(rbind, B2_list)
+
+
+############################################################
+## FDR correction for Table B.2
+############################################################
+
+# 注意：
+# 这里对 14 个 McNemar p-values 统一进行 BH-FDR 校正
+# 7 个模型 × 2 个语言 = 14 comparisons
+
+p_B2 <- c(
+  B2_raw$CN_p_value,
+  B2_raw$EN_p_value
+)
+
+B2_raw$CN_FDR_p_value <- p.adjust(
+  B2_raw$CN_p_value,
+  method = "BH"
+)
+
+B2_raw$EN_FDR_p_value <- p.adjust(
+  B2_raw$EN_p_value,
+  method = "BH"
+)
+
+Table_B2 <- B2_raw
+
+
+############################################################
+## Table B.3: Chinese vs. English
+############################################################
+
+B3_list <- lapply(model_names, function(model) {
+  
+  # Basic: Chinese vs English
+  C_Bsc <- pred_label[[paste0(model, "_C_Bsc")]]
+  E_Bsc <- pred_label[[paste0(model, "_E_Bsc")]]
+  
+  # Pro: Chinese vs English
+  C_Pro <- pred_label[[paste0(model, "_C_Pro")]]
+  E_Pro <- pred_label[[paste0(model, "_E_Pro")]]
+  
+  # Basic: Chinese vs English
+  test_Bsc <- mcnemar.test(
+    table(
+      Chinese = C_Bsc == actual_label,
+      English = E_Bsc == actual_label
+    )
+  )
+  
+  # Pro: Chinese vs English
+  test_Pro <- mcnemar.test(
+    table(
+      Chinese = C_Pro == actual_label,
+      English = E_Pro == actual_label
+    )
+  )
+  
+  data.frame(
+    Model = model,
+    
+    Basic_CN_Accuracy =
+      mean(C_Bsc == actual_label),
+    
+    Basic_EN_Accuracy =
+      mean(E_Bsc == actual_label),
+    
+    Basic_McNemar_Chi_Square =
+      unname(test_Bsc$statistic),
+    
+    Basic_p_value =
+      test_Bsc$p.value,
+    
+    Pro_CN_Accuracy =
+      mean(C_Pro == actual_label),
+    
+    Pro_EN_Accuracy =
+      mean(E_Pro == actual_label),
+    
+    Pro_McNemar_Chi_Square =
+      unname(test_Pro$statistic),
+    
+    Pro_p_value =
+      test_Pro$p.value
+  )
+})
+
+
+B3_raw <- do.call(rbind, B3_list)
+
+
+############################################################
+## FDR correction for Table B.3
+############################################################
+
+# 7 个模型 × 2 个 prompt 类型 = 14 comparisons
+
+B3_raw$Basic_CN_FDR_p_value <- p.adjust(
+  B3_raw$Basic_p_value,
+  method = "BH"
+)
+
+B3_raw$Pro_CN_FDR_p_value <- p.adjust(
+  B3_raw$Pro_p_value,
+  method = "BH"
+)
+
+Table_B3 <- B3_raw
+
+
+############################################################
+## Export to Excel
+############################################################
+
+write.xlsx(
+  list(
+    Table_B2 = Table_B2,
+    Table_B3 = Table_B3
+  ),
+  file = "McNemar_FDR_Tables.xlsx",
+  rowNames = FALSE
+)
+
+############################################################
+# Paired t-test: MAE
+# Basic vs. Pro and Chinese vs. English
+############################################################
+
+# 真实净胜球
+actual_value <- 足球数据统计A$真实结果
+
+
+############################################################
+## Table C.2: Basic vs. Pro MAE
+############################################################
+
+C2_list <- lapply(model_names, function(model) {
+  
+  # CN
+  bsc_C <- 足球数据统计A[[paste0(model, "_C_Bsc")]]
+  pro_C <- 足球数据统计A[[paste0(model, "_C_Pro")]]
+  
+  # EN
+  bsc_E <- 足球数据统计A[[paste0(model, "_E_Bsc")]]
+  pro_E <- 足球数据统计A[[paste0(model, "_E_Pro")]]
+  
+  
+  ##########################################################
+  # Calculate match-level absolute errors
+  ##########################################################
+  
+  error_bsc_C <- abs(bsc_C - actual_value)
+  error_pro_C <- abs(pro_C - actual_value)
+  
+  error_bsc_E <- abs(bsc_E - actual_value)
+  error_pro_E <- abs(pro_E - actual_value)
+  
+  
+  ##########################################################
+  # CN: Basic vs. Pro
+  ##########################################################
+  
+  test_C <- t.test(
+    error_bsc_C,
+    error_pro_C,
+    paired = TRUE
+  )
+  
+  
+  ##########################################################
+  # EN: Basic vs. Pro
+  ##########################################################
+  
+  test_E <- t.test(
+    error_bsc_E,
+    error_pro_E,
+    paired = TRUE
+  )
+  
+  
+  ##########################################################
+  # Results
+  ##########################################################
+  
+  data.frame(
+    Model = model,
+    
+    CN_Basic_MAE =
+      mean(error_bsc_C, na.rm = TRUE),
+    
+    CN_Pro_MAE =
+      mean(error_pro_C, na.rm = TRUE),
+    
+    CN_Paired_t =
+      unname(test_C$statistic),
+    
+    CN_p_value =
+      test_C$p.value,
+    
+    EN_Basic_MAE =
+      mean(error_bsc_E, na.rm = TRUE),
+    
+    EN_Pro_MAE =
+      mean(error_pro_E, na.rm = TRUE),
+    
+    EN_Paired_t =
+      unname(test_E$statistic),
+    
+    EN_p_value =
+      test_E$p.value
+  )
+})
+
+
+C2_raw <- do.call(rbind, C2_list)
+
+
+############################################################
+## FDR correction for Table C.2
+############################################################
+
+# 7 个模型 × 2 个语言 = 14 paired t-tests
+# 所有 14 个 p-values 统一进行 BH-FDR 校正
+
+p_C2 <- c(
+  C2_raw$CN_p_value,
+  C2_raw$EN_p_value
+)
+
+C2_FDR <- p.adjust(
+  p_C2,
+  method = "BH"
+)
+
+C2_raw$CN_FDR_p_value <- C2_FDR[1:7]
+
+C2_raw$EN_FDR_p_value <- C2_FDR[8:14]
+
+Table_C2 <- C2_raw
+
+
+############################################################
+## Table C.3: CN vs. EN MAE
+############################################################
+
+C3_list <- lapply(model_names, function(model) {
+  
+  # Basic
+  C_Bsc <- 足球数据统计A[[paste0(model, "_C_Bsc")]]
+  E_Bsc <- 足球数据统计A[[paste0(model, "_E_Bsc")]]
+  
+  # Pro
+  C_Pro <- 足球数据统计A[[paste0(model, "_C_Pro")]]
+  E_Pro <- 足球数据统计A[[paste0(model, "_E_Pro")]]
+  
+  
+  ##########################################################
+  # Calculate match-level absolute errors
+  ##########################################################
+  
+  error_C_Bsc <- abs(C_Bsc - actual_value)
+  error_E_Bsc <- abs(E_Bsc - actual_value)
+  
+  error_C_Pro <- abs(C_Pro - actual_value)
+  error_E_Pro <- abs(E_Pro - actual_value)
+  
+  
+  ##########################################################
+  # Basic: CN vs. EN
+  ##########################################################
+  
+  test_Bsc <- t.test(
+    error_C_Bsc,
+    error_E_Bsc,
+    paired = TRUE
+  )
+  
+  
+  ##########################################################
+  # Pro: CN vs. EN
+  ##########################################################
+  
+  test_Pro <- t.test(
+    error_C_Pro,
+    error_E_Pro,
+    paired = TRUE
+  )
+  
+  
+  ##########################################################
+  # Results
+  ##########################################################
+  
+  data.frame(
+    Model = model,
+    
+    Basic_CN_MAE =
+      mean(error_C_Bsc, na.rm = TRUE),
+    
+    Basic_EN_MAE =
+      mean(error_E_Bsc, na.rm = TRUE),
+    
+    Basic_Paired_t =
+      unname(test_Bsc$statistic),
+    
+    Basic_p_value =
+      test_Bsc$p.value,
+    
+    Pro_CN_MAE =
+      mean(error_C_Pro, na.rm = TRUE),
+    
+    Pro_EN_MAE =
+      mean(error_E_Pro, na.rm = TRUE),
+    
+    Pro_Paired_t =
+      unname(test_Pro$statistic),
+    
+    Pro_p_value =
+      test_Pro$p.value
+  )
+})
+
+
+C3_raw <- do.call(rbind, C3_list)
+
+
+############################################################
+## FDR correction for Table C.3
+############################################################
+
+# 7 个模型 × 2 个 prompt 类型 = 14 paired t-tests
+# 所有 14 个 p-values 统一进行 BH-FDR 校正
+
+p_C3 <- c(
+  C3_raw$Basic_p_value,
+  C3_raw$Pro_p_value
+)
+
+C3_FDR <- p.adjust(
+  p_C3,
+  method = "BH"
+)
+
+C3_raw$Basic_FDR_p_value <- C3_FDR[1:7]
+
+C3_raw$Pro_FDR_p_value <- C3_FDR[8:14]
+
+Table_C3 <- C3_raw
+
+
+############################################################
+## Export C.2 and C.3
+############################################################
+
+write.xlsx(
+  list(
+    Table_C2 = Table_C2,
+    Table_C3 = Table_C3
+  ),
+  file = "Paired_t_test_MAE_FDR_Tables.xlsx",
+  rowNames = FALSE
+)
+
+############################################################
+# Packages
+############################################################
+
+library(dplyr)
+library(openxlsx)
+
+
+############################################################
+# Model names
+############################################################
+
+model_names <- c(
+  "DeepSeek",
+  "Doubao",
+  "Hunyuan",
+  "Qwen",
+  "Claude",
+  "GPT",
+  "Grok"
+)
+
+
+
+############################################################
+############################################################
+# Table B.2
+# Basic vs Pro Accuracy
+# McNemar Test + BH-FDR
+############################################################
+############################################################
+
+
+B2_list <- lapply(model_names, function(model){
+  
+  CN_Bsc <- pred_label[[paste0(model,"_C_Bsc")]]
+  CN_Pro <- pred_label[[paste0(model,"_C_Pro")]]
+  
+  EN_Bsc <- pred_label[[paste0(model,"_E_Bsc")]]
+  EN_Pro <- pred_label[[paste0(model,"_E_Pro")]]
+  
+  
+  test_CN <- mcnemar.test(
+    table(
+      Basic = CN_Bsc == actual_label,
+      Pro = CN_Pro == actual_label
+    )
+  )
+  
+  
+  test_EN <- mcnemar.test(
+    table(
+      Basic = EN_Bsc == actual_label,
+      Pro = EN_Pro == actual_label
+    )
+  )
+  
+  
+  data.frame(
+    
+    Model = model,
+    
+    CN_Basic_Accuracy =
+      mean(CN_Bsc == actual_label),
+    
+    CN_Pro_Accuracy =
+      mean(CN_Pro == actual_label),
+    
+    CN_Chi_square =
+      as.numeric(test_CN$statistic),
+    
+    CN_p_value =
+      test_CN$p.value,
+    
+    
+    EN_Basic_Accuracy =
+      mean(EN_Bsc == actual_label),
+    
+    EN_Pro_Accuracy =
+      mean(EN_Pro == actual_label),
+    
+    EN_Chi_square =
+      as.numeric(test_EN$statistic),
+    
+    EN_p_value =
+      test_EN$p.value
+    
+  )
+  
+})
+
+
+B2_raw <- bind_rows(B2_list)
+
+
+
+# -------- FDR correction 14 comparisons --------
+
+B2_p <- c(
+  B2_raw$CN_p_value,
+  B2_raw$EN_p_value
+)
+
+
+B2_q <- p.adjust(
+  B2_p,
+  method="BH"
+)
+
+
+B2_raw$CN_FDR_q_value <- B2_q[1:7]
+
+B2_raw$EN_FDR_q_value <- B2_q[8:14]
+
+
+Table_B2 <- B2_raw
+
+
+
+
+
+############################################################
+############################################################
+# Table B.3
+# CN vs EN Accuracy
+# McNemar Test + BH-FDR
+############################################################
+############################################################
+
+
+B3_list <- lapply(model_names,function(model){
+  
+  
+  CN_Bsc <- pred_label[[paste0(model,"_C_Bsc")]]
+  EN_Bsc <- pred_label[[paste0(model,"_E_Bsc")]]
+  
+  CN_Pro <- pred_label[[paste0(model,"_C_Pro")]]
+  EN_Pro <- pred_label[[paste0(model,"_E_Pro")]]
+  
+  
+  test_Bsc <- mcnemar.test(
+    table(
+      CN = CN_Bsc == actual_label,
+      EN = EN_Bsc == actual_label
+    )
+  )
+  
+  
+  test_Pro <- mcnemar.test(
+    table(
+      CN = CN_Pro == actual_label,
+      EN = EN_Pro == actual_label
+    )
+  )
+  
+  
+  
+  data.frame(
+    
+    Model=model,
+    
+    
+    Basic_CN_Accuracy =
+      mean(CN_Bsc == actual_label),
+    
+    Basic_EN_Accuracy =
+      mean(EN_Bsc == actual_label),
+    
+    
+    Basic_Chi_square =
+      as.numeric(test_Bsc$statistic),
+    
+    Basic_p_value =
+      test_Bsc$p.value,
+    
+    
+    
+    Pro_CN_Accuracy =
+      mean(CN_Pro == actual_label),
+    
+    Pro_EN_Accuracy =
+      mean(EN_Pro == actual_label),
+    
+    
+    Pro_Chi_square =
+      as.numeric(test_Pro$statistic),
+    
+    Pro_p_value =
+      test_Pro$p.value
+    
+  )
+  
+})
+
+
+B3_raw <- bind_rows(B3_list)
+
+
+
+# FDR
+
+B3_p <- c(
+  B3_raw$Basic_p_value,
+  B3_raw$Pro_p_value
+)
+
+
+B3_q <- p.adjust(
+  B3_p,
+  method="BH"
+)
+
+
+B3_raw$Basic_FDR_q_value <- B3_q[1:7]
+
+B3_raw$Pro_FDR_q_value <- B3_q[8:14]
+
+
+Table_B3 <- B3_raw
+
+
+
+
+
+############################################################
+############################################################
+# Table C.2
+# Basic vs Pro MAE
+# Paired t-test + BH-FDR
+############################################################
+############################################################
+
+
+C2_list <- lapply(model_names,function(model){
+  
+  
+  # Chinese
+  
+  B_CN <- as.numeric(
+    足球数据统计A[[paste0(model,"_C_Bsc")]]
+  )
+  
+  P_CN <- as.numeric(
+    足球数据统计A[[paste0(model,"_C_Pro")]]
+  )
+  
+  
+  # English
+  
+  B_EN <- as.numeric(
+    足球数据统计A[[paste0(model,"_E_Bsc")]]
+  )
+  
+  P_EN <- as.numeric(
+    足球数据统计A[[paste0(model,"_E_Pro")]]
+  )
+  
+  
+  
+  test_CN <- t.test(
+    abs(B_CN-足球数据统计A$真实结果),
+    abs(P_CN-足球数据统计A$真实结果),
+    paired=TRUE
+  )
+  
+  
+  
+  test_EN <- t.test(
+    abs(B_EN-足球数据统计A$真实结果),
+    abs(P_EN-足球数据统计A$真实结果),
+    paired=TRUE
+  )
+  
+  
+  
+  data.frame(
+    
+    Model=model,
+    
+    
+    CN_Basic_MAE =
+      mean(abs(B_CN-足球数据统计A$真实结果)),
+    
+    CN_Pro_MAE =
+      mean(abs(P_CN-足球数据统计A$真实结果)),
+    
+    
+    CN_t =
+      as.numeric(test_CN$statistic),
+    
+    CN_p_value =
+      test_CN$p.value,
+    
+    
+    
+    EN_Basic_MAE =
+      mean(abs(B_EN-足球数据统计A$真实结果)),
+    
+    EN_Pro_MAE =
+      mean(abs(P_EN-足球数据统计A$真实结果)),
+    
+    
+    EN_t =
+      as.numeric(test_EN$statistic),
+    
+    EN_p_value =
+      test_EN$p.value
+    
+  )
+  
+})
+
+
+
+Table_C2 <- bind_rows(C2_list)
+
+
+
+# FDR
+
+C2_p <- c(
+  Table_C2$CN_p_value,
+  Table_C2$EN_p_value
+)
+
+
+C2_q <- p.adjust(
+  C2_p,
+  method="BH"
+)
+
+
+Table_C2$CN_FDR_q_value <- C2_q[1:7]
+
+Table_C2$EN_FDR_q_value <- C2_q[8:14]
+
+
+
+
+
+
+############################################################
+############################################################
+# Table C.3
+# CN vs EN MAE
+# Paired t-test + BH-FDR
+############################################################
+############################################################
+
+
+
+C3_list <- lapply(model_names,function(model){
+  
+  
+  CN_Bsc <- as.numeric(
+    足球数据统计A[[paste0(model,"_C_Bsc")]]
+  )
+  
+  EN_Bsc <- as.numeric(
+    足球数据统计A[[paste0(model,"_E_Bsc")]]
+  )
+  
+  
+  
+  CN_Pro <- as.numeric(
+    足球数据统计A[[paste0(model,"_C_Pro")]]
+  )
+  
+  EN_Pro <- as.numeric(
+    足球数据统计A[[paste0(model,"_E_Pro")]]
+  )
+  
+  
+  
+  test_Bsc <- t.test(
+    abs(CN_Bsc-足球数据统计A$真实结果),
+    abs(EN_Bsc-足球数据统计A$真实结果),
+    paired=TRUE
+  )
+  
+  
+  
+  test_Pro <- t.test(
+    abs(CN_Pro-足球数据统计A$真实结果),
+    abs(EN_Pro-足球数据统计A$真实结果),
+    paired=TRUE
+  )
+  
+  
+  
+  data.frame(
+    
+    Model=model,
+    
+    
+    Basic_CN_MAE =
+      mean(abs(CN_Bsc-足球数据统计A$真实结果)),
+    
+    
+    Basic_EN_MAE =
+      mean(abs(EN_Bsc-足球数据统计A$真实结果)),
+    
+    
+    Basic_t =
+      as.numeric(test_Bsc$statistic),
+    
+    Basic_p_value =
+      test_Bsc$p.value,
+    
+    
+    
+    Pro_CN_MAE =
+      mean(abs(CN_Pro-足球数据统计A$真实结果)),
+    
+    
+    Pro_EN_MAE =
+      mean(abs(EN_Pro-足球数据统计A$真实结果)),
+    
+    
+    Pro_t =
+      as.numeric(test_Pro$statistic),
+    
+    Pro_p_value =
+      test_Pro$p.value
+    
+  )
+  
+})
+
+
+
+Table_C3 <- bind_rows(C3_list)
+
+
+
+# FDR
+
+C3_p <- c(
+  Table_C3$Basic_p_value,
+  Table_C3$Pro_p_value
+)
+
+
+C3_q <- p.adjust(
+  C3_p,
+  method="BH"
+)
+
+
+Table_C3$Basic_FDR_q_value <- C3_q[1:7]
+
+Table_C3$Pro_FDR_q_value <- C3_q[8:14]
+
+
+
+
+
+############################################################
+# Export Excel
+############################################################
+
+
+write.xlsx(
+  
+  list(
+    
+    Table_B2 = Table_B2,
+    
+    Table_B3 = Table_B3,
+    
+    Table_C2 = Table_C2,
+    
+    Table_C3 = Table_C3
+    
+  ),
+  
+  file="FDR_McNemar_ttest_results.xlsx",
+  
+  rowNames=FALSE
+  
 )
