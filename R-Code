@@ -10,7 +10,7 @@ library(scales)
 
 # Football data in 2024/2025 season
 
-足球数据统计_Sheet1_ <- read_csv("足球数据统计(Sheet1).csv")
+足球数据统计_Sheet1_ <- read_csv("dataset_1006_matches.csv")
 
 ## Full Model and Stepwise Regression (Original Features)
 
